@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Karasuno Library & Pixel Puppy Companion</title>
+    <style>
+        :root { --bg: #0b1020; --panel: #131d38; --neon: #00f0ff; --purple: #b967ff; --pink: #ff71ce; --text: #e8f4ff; --muted: #9fb3d1; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #27355c; padding-bottom: 15px; margin-bottom: 20px; }
+        h1 { margin: 0; color: var(--neon); font-size: 1.8rem; text-shadow: 0 0 10px rgba(0,240,255,0.4); }
+        .controls { display: flex; gap: 10px; align-items: center; }
+        select, button, input, textarea { background: var(--panel); color: var(--text); border: 1px solid #27355c; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        button:hover { background: #1c2b54; border-color: var(--neon); }
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .card { background: var(--panel); border: 1px solid #27355c; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #1a2547; font-size: 0.95rem; }
+        th { color: var(--neon); }
+        #chatbot { height: 220px; overflow-y: auto; border: 1px solid #27355c; padding: 10px; background: #080c18; border-radius: 6px; margin-bottom: 10px; }
+        .chat-msg { margin-bottom: 8px; font-size: 0.9rem; }
+        .chat-msg.bot { color: var(--neon); }
+        .chat-msg.user { color: var(--purple); text-align: right; }
+        .puppy-box { text-align: center; background: #080c18; border: 2px solid var(--pink); border-radius: 10px; padding: 15px; }
+        canvas { image-rendering: pixelated; image-rendering: crisp-edges; background: #101830; border-radius: 6px; border: 1px solid #27355c; }
+        .stat-bar { background: #27355c; border-radius: 4px; overflow: hidden; height: 12px; margin: 5px 0 12px 0; }
+        .stat-fill { height: 100%; width: 50%; background: var(--neon); transition: width 0.3s; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
+        .modal-content { background: var(--panel); padding: 30px; border-radius: 12px; width: 500px; border: 2px solid var(--neon); text-align: center; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🦅 Karasuno Library System & Puppy</h1>
+    <div class="controls">
+        <label>Language:</label>
+        <select id="langSelect" onchange="changeLanguage()">
+            <option value="en">English</option>
+            <option value="te">తెలుగు (Telugu)</option>
+            <option value="hi">हिन्दी (Hindi)</option>
+        </select>
+        <button onclick="toggleHighContrast()">Toggle Contrast</button>
+        <button onclick="openOnboarding()">Tour</button>
+    </div>
+</header>
+
+<div class="grid">
+    <div>
+        <div class="card">
+            <h3 id="ui-dashboard">Library Overview & Statistics</h3>
+            <div id="summaryStats" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">Loading stats...</div>
+        </div>
+
+        <div class="card">
+            <h3 id="ui-books">Book Inventory & Management</h3>
+            <div style="max-height: 250px; overflow-y: auto;">
+                <table id="booksTable">
+                    <thead><tr><th>ISBN</th><th>Title</th><th>Author</th><th>Category</th><th>Available</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card" style="border: 2px dashed var(--purple);">
+            <h3 id="ui-story-title">🌙 Bedtime Storyteller for Children</h3>
+            <p id="ui-story-desc" style="color: var(--muted); font-size:0.85rem;">Paste any story below, customize pitch/speed parameters, and let it read aloud!</p>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px; align-items:center; font-size:0.8rem;">
+                <span>Pitch: <input type="range" id="voicePitch" min="0.5" max="1.5" value="0.9" step="0.1" style="width:70px;"></span>
+                <span>Speed: <input type="range" id="voiceRate" min="0.5" max="1.2" value="0.85" step="0.05" style="width:70px;"></span>
+            </div>
+            <input type="text" id="storyTitleInput" placeholder="Story Title..." style="width: 100%; margin-bottom: 6px; box-sizing:border-box;" />
+            <textarea id="storyContentInput" rows="3" placeholder="Paste children's story text here..." style="width: 100%; margin-bottom: 6px; box-sizing:border-box;"></textarea>
+            <button onclick="readBedtimeStory()" style="background:var(--purple); font-weight:bold; width:100%;">🎙️ Read Aloud</button>
+        </div>
+    </div>
+
+    <div>
+        <div class="card puppy-box">
+            <h3 id="ui-puppy-title" style="color: var(--pink); margin-top:0;">🐶 Karasu - Your Virtual Puppy</h3>
+            <p id="puppyMood" style="font-size:0.85rem; color:var(--muted); margin-top:-5px;">"Woof! Visit me daily to keep me hydrated and happy!"</p>
+            <canvas id="puppyCanvas" width="160" height="120"></canvas>
+            <div style="text-align:left; font-size:0.85rem; margin-top:10px;">
+                <span>💧 Water Level:</span>
+                <div class="stat-bar"><div id="waterFill" class="stat-fill" style="width:80%;"></div></div>
+                <span>❤️ Happiness:</span>
+                <div class="stat-bar"><div id="happyFill" class="stat-fill" style="width:80%; background:var(--pink);"></div></div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button onclick="feedWater()" style="flex:1; background:#0088cc; font-weight:bold;">🚰 Give Water</button>
+                <button onclick="playFetch()" style="flex:1; background:#cc0088; font-weight:bold;">🎾 Play Fetch</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 id="ui-chat-title">💬 Assistant & FAQ</h3>
+            <div id="chatbot">
+                <div class="chat-msg bot" id="welcomeChat">KARASUNO: Hello! How can I assist you with your library tasks today?</div>
+            </div>
+            <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                <input type="text" id="chatInput" placeholder="Ask a question..." style="flex-grow:1;" onkeypress="if(event.key==='Enter')sendChat()" />
+                <button onclick="sendChat()">Send</button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                <button style="font-size:0.75rem; padding:4px 6px;" onclick="quickFAQ('issue')">How to issue?</button>
+                <button style="font-size:0.75rem; padding:4px 6px;" onclick="quickFAQ('overdue')">Overdue books</button>
+                <button style="font-size:0.75rem; padding:4px 6px;" onclick="quickFAQ('puppy')">Puppy care tips</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="onboardingModal" class="modal">
+    <div class="modal-content">
+        <h2 style="color:var(--neon)">Welcome to Karasuno Library System!</h2>
+        <p style="text-align: left; line-height: 1.5; color: var(--muted);">
+            1. <b>Library & Loans:</b> Monitor books, issue inventory, and track returns.<br>
+            2. <b>Pixel Puppy Companion:</b> Check in daily to feed water and play fetch with Karasu!<br>
+            3. <b>Multi-Language:</b> Switch between English, Telugu, and Hindi instantly.<br>
+            4. <b>Bedtime Storyteller:</b> Paste bedtime stories and listen to soothing voice narration.
+        </p>
+        <button onclick="closeOnboarding()" style="background:var(--neon); color:#000; font-weight:bold; padding: 10px 20px; margin-top: 15px;">Get Started</button>
+    </div>
+</div>
+
+<script>
+    const translations = {
+        en: { dash: "Library Overview & Statistics", books: "Book Inventory & Management", storyTitle: "🌙 Bedtime Storyteller for Children", storyDesc: "Paste any story below, customize pitch/speed parameters, and let it read aloud!", chatTitle: "💬 Assistant & FAQ" },
+        te: { dash: "లైబ్రరీ అవలోకనం & గణాంకాలు", books: "పుస్తకాల జాబితా & నిర్వహణ", storyTitle: "🌙 పిల్లల నిద్రవేళ కథలు", storyDesc: "కథను పేస్ట్ చేసి వాయిస్ ద్వారా వినండి!", chatTitle: "💬 సహాయకుడు & ప్రశ్నలు" },
+        hi: { dash: "पुस्तकालय अवलोकन और सांख्यिकी", books: "पुस्तकालय सूची और प्रबंधन", storyTitle: "🌙 बच्चों की सोने की कहानी", storyDesc: "कहानी पेस्ट करें और आवाज सुनें!", chatTitle: "💬 सहायक और प्रश्न" }
+    };
+
+    function changeLanguage() {
+        const lang = document.getElementById('langSelect').value;
+        const t = translations[lang] || translations.en;
+        document.getElementById('ui-dashboard').innerText = t.dash;
+        document.getElementById('ui-books').innerText = t.books;
+        document.getElementById('ui-story-title').innerText = t.storyTitle;
+        document.getElementById('ui-story-desc').innerText = t.storyDesc;
+        document.getElementById('ui-chat-title').innerText = t.chatTitle;
+    }
+
+    function toggleHighContrast() { document.body.style.filter = document.body.style.filter === 'invert(100%)' ? 'none' : 'invert(100%)'; }
+    function openOnboarding() { document.getElementById('onboardingModal').style.display = 'flex'; }
+    function closeOnboarding() { document.getElementById('onboardingModal').style.display = 'none'; }
+
+    let puppyData = { water: 85, happiness: 90, action: 'idle' };
+
+    function drawPixelPuppy() {
+        const canvas = document.getElementById('puppyCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#ffaa44";
+        ctx.fillRect(50, 55, 60, 40);
+        ctx.fillStyle = "#dd8822";
+        ctx.fillRect(80, 35, 45, 35);
+        ctx.fillStyle = "#332211";
+        ctx.fillRect(85, 25, 12, 15);
+        ctx.fillRect(108, 25, 12, 15);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(92, 45, 6, 6);
+        ctx.fillRect(110, 45, 6, 6);
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(94, 47, 3, 3);
+        ctx.fillRect(112, 47, 3, 3);
+        ctx.fillRect(103, 56, 6, 4);
+
+        if (puppyData.happiness > 50) {
+            ctx.fillStyle = "#ffaa44";
+            ctx.fillRect(38, 45 + (Math.floor(Date.now() / 200) % 2) * 4, 15, 6);
+        }
+
+        if (puppyData.action === 'drinking') {
+            ctx.fillStyle = "#00f0ff";
+            ctx.fillRect(60, 85, 18, 10);
+        } else if (puppyData.action === 'playing') {
+            ctx.fillStyle = "#ff71ce";
+            ctx.fillRect(40, 75, 10, 10);
+        }
+    }
+
+    setInterval(drawPixelPuppy, 150);
+
+    function feedWater() {
+        puppyData.water = Math.min(100, puppyData.water + 20);
+        puppyData.happiness = Math.min(100, puppyData.happiness + 5);
+        puppyData.action = 'drinking';
+        document.getElementById('puppyMood').innerText = '"Slurp! Ahh, thank you for the fresh water today! 💧"';
+        updatePuppyUI();
+        setTimeout(() => puppyData.action = 'idle', 2000);
+    }
+
+    function playFetch() {
+        puppyData.happiness = Math.min(100, puppyData.happiness + 15);
+        puppyData.water = Math.max(0, puppyData.water - 5);
+        puppyData.action = 'playing';
+        document.getElementById('puppyMood').innerText = '"Yip yip! Playing fetch is so much fun! 🎾"';
+        updatePuppyUI();
+        setTimeout(() => puppyData.action = 'idle', 2000);
+    }
+
+    function updatePuppyUI() {
+        document.getElementById('waterFill').style.width = puppyData.water + '%';
+        document.getElementById('happyFill').style.width = puppyData.happiness + '%';
+    }
+
+    function sendChat(customText = null) {
+        const input = document.getElementById('chatInput');
+        const query = customText || input.value.trim();
+        if(!query) return;
+        
+        const chatBox = document.getElementById('chatbot');
+        chatBox.innerHTML += `<div class="chat-msg user">${query}</div>`;
+        if(!customText) input.value = '';
+
+        let lang = document.getElementById('langSelect').value;
+        let response = "I can help you manage books, check loans, or care for your virtual puppy!";
+        const q = query.toLowerCase();
+
+        if(q.includes('issue')) {
+            if(lang === 'te') response = "KARASUNO: Issue Book ఎంపిక చేసి, borrower మరియు పుస్తకాన్ని ఎంచుకుని, due date verify చేసి Issue క్లిక్ చేయండి.";
+            else if(lang === 'hi') response = "KARASUNO: Issue Book चुनें, borrower और किताब चुनें और Issue पर क्लिक करें।";
+            else response = "KARASUNO: Select Issue Book, choose the borrower and available book, verify the due date, and click Issue.";
+        } else if(q.includes('overdue')) {
+            response = "KARASUNO: You can view all overdue books under the Reports or Loans section.";
+        } else if(q.includes('puppy') || q.includes('dog')) {
+            response = "KARASUNO: Karasu the puppy loves daily check-ins! Click 'Give Water' daily to keep him hydrated and 'Play Fetch' to boost his happiness.";
+        }
+
+        setTimeout(() => {
+            chatBox.innerHTML += `<div class="chat-msg bot">${response}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }, 300);
+    }
+
+    function quickFAQ(type) {
+        if(type === 'issue') sendChat("How do I issue a book?");
+        else if(type === 'overdue') sendChat("Check overdue books");
+        else if(type === 'puppy') sendChat("Puppy care tips");
+    }
+
+    function readBedtimeStory() {
+        const title = document.getElementById('storyTitleInput').value;
+        const content = document.getElementById('storyContentInput').value;
+        if(!content) { alert("Please enter a story text!"); return; }
+        if (!('speechSynthesis' in window)) { alert("TTS not supported."); return; }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance((title ? title + ". " : "") + content);
+        utterance.pitch = parseFloat(document.getElementById('voicePitch').value);
+        utterance.rate = parseFloat(document.getElementById('voiceRate').value);
+        window.speechSynthesis.speak(utterance);
+    }
+
+    window.onload = function() {
+        openOnboarding();
+        fetch('/api/summary').then(res => res.json()).then(data => {
+            document.getElementById('summaryStats').innerHTML = `
+                <div><b>Books:</b> ${data.titles} (${data.available} avail)</div>
+                <div><b>Borrowers:</b> ${data.borrowers}</div>
+                <div><b>Active Loans:</b> ${data.active}</div>
+                <div><b>Overdue:</b> ${data.overdue}</div>
+            `;
+        });
+        fetch('/api/books').then(res => res.json()).then(books => {
+            const tbody = document.querySelector('#booksTable tbody');
+            tbody.innerHTML = books.map(b => `<tr><td>${b.isbn}</td><td>${b.title}</td><td>${b.author}</td><td>${b.category}</td><td>${b.copies_available}/${b.copies_total}</td></tr>`).join('');
+        });
+    }
+</script>
+</body>
+</html>
